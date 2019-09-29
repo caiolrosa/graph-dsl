@@ -1,7 +1,10 @@
 mod token;
+mod parser;
+mod graph;
 
 fn main() {
     let mut tokenizer = token::Tokenizer::new();
+    let mut parser = parser::Parser::new();
     let input: &str = "
         graph {
             graph [bgcolor=\"yellow\"]
@@ -11,5 +14,5 @@ fn main() {
         }
     ";
     let tokens = tokenizer.parse(input);
-    println!("{:?}", tokens);
+
 }
