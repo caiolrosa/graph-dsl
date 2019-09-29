@@ -1,7 +1,7 @@
 use std::str::Chars;
 use std::iter::Peekable;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
     BracketOpen,
     BracketClose,
@@ -57,7 +57,7 @@ impl Tokenizer {
     }
 
     fn parse_identifier(&self, token: String) -> Token {
-        match token.as_str() {
+        match token.to_lowercase().as_str() {
             "graph" => Token::GraphKeyword,
             "bgcolor" => Token::BGColorKeyword,
             "color" => Token::ColorKeyword,
