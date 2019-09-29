@@ -3,16 +3,16 @@ use std::iter::Peekable;
 
 #[derive(Debug)]
 pub enum Token {
-    SquareBracketOpen,
-    SquareBracketClose,
-    CurlyBraceOpen,
-    CurlyBraceClose,
-    EqualsSign,
-    QuotationMark,
-    EdgeDeclaration,
-    GraphDeclaration,
-    BGColorDeclaration,
-    ColorDeclaration,
+    BracketOpen,
+    BracketClose,
+    CurlyOpen,
+    CurlyClose,
+    Equals,
+    Quotation,
+    Dash,
+    GraphKeyword,
+    BGColorKeyword,
+    ColorKeyword,
     IdentifierDeclaration(String),
 }
 
@@ -45,32 +45,22 @@ impl Tokenizer {
         }
 
         match curr_char {
-            '{' => Token::CurlyBraceOpen,
-            '}' => Token::CurlyBraceClose,
-            '[' => Token::SquareBracketOpen,
-            ']' => Token::SquareBracketClose,
-            '=' => Token::EqualsSign,
-            '"' => Token::QuotationMark,
-            '-' => {
-                if let Some(c) = chars.next() {
-                    if c == '-' {
-                        return Token::EdgeDeclaration;
-                    } else {
-                        panic!("Incorrect edge declaration, missing - (dash)");
-                    }
-                } else {
-                    panic!("Invalid syntax, expected - but found nothing");
-                }
-            },
+            '{' => Token::CurlyOpen,
+            '}' => Token::CurlyClose,
+            '[' => Token::BracketOpen,
+            ']' => Token::BracketClose,
+            '=' => Token::Equals,
+            '"' => Token::Quotation,
+            '-' => Token::Dash,
             _ => panic!("Invalid syntax, unrecognized character {}", curr_char)
         }
     }
 
     fn parse_identifier(&self, token: String) -> Token {
         match token.as_str() {
-            "graph" => Token::GraphDeclaration,
-            "bgcolor" => Token::BGColorDeclaration,
-            "color" => Token::ColorDeclaration,
+            "graph" => Token::GraphKeyword,
+            "bgcolor" => Token::BGColorKeyword,
+            "color" => Token::ColorKeyword,
             _ => Token::IdentifierDeclaration(token),
         }
     }
