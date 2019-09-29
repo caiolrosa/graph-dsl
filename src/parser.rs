@@ -36,7 +36,7 @@ impl Parser {
             self.graph.attrs.insert(attr_tuple.0, attr_tuple.1);
         }
 
-        if *token != Token::CurlyOpen || *token != Token::BracketOpen {
+        if *token != Token::CurlyOpen {
             eprintln!("Expected {{ or [ but found {:?}.", token);
             exit(1);
         }
