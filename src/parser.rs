@@ -73,12 +73,22 @@ impl Parser {
     }
 
     fn edge_declaration(&mut self, left_node: Node, tokens: &mut Peekable<Iter<Token>>) -> Edge {
+        let existing_node = self.graph.nodes.iter().find(|node| node.label == left_node.label);
+        if let None = existing_node {
+            eprintln!("Can't create edge with non existing left node \"{}\"", left_node.label);
+            exit(1);
+        }
+
         let mut edge = Edge::default();
         while let Some(t) = tokens.next() {
             match t {
                 Token::IdentifierDeclaration(id) => {
-                    let right_node = Node::with_label(id.clone());
-                    edge = Edge::with_nodes(left_node.clone(), right_node);
+                    let right_node = self.graph.nodes.iter().find(|node| node.label == *id);
+                    if let None = right_node {
+                        eprintln!("Can't create edge with non existing right node \"{}\"", *id);
+                        exit(1);
+                    }
+                    edge = Edge::with_nodes(existing_node.unwrap().clone(), right_node.unwrap().clone());
                 },
                 Token::BracketOpen => {
                     let attr_tuple = self.attr_declaration(tokens);
@@ -92,7 +102,7 @@ impl Parser {
             }
         }
 
-        eprintln!("Invalid syntax");
+        eprintln!("Missing closing ]");
         exit(1);
     }
 
