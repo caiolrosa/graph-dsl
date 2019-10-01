@@ -14,5 +14,6 @@ fn main() {
         }
     ";
     let tokens = tokenizer.parse(input);
-
+    let graph = parser.parse(tokens);
+    println!("{:?}", graph);
 }

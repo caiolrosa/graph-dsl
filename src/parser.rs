@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::iter::Peekable;
 use std::process::{exit};
 use std::slice::{Iter};
@@ -16,16 +15,22 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self, tokens: Vec<Token>) {
+    pub fn parse(&mut self, tokens: Vec<Token>) -> &Graph {
         let mut token_iter = tokens.iter().peekable();
         while let Some(token) = token_iter.next() {
             match token {
                 Token::GraphKeyword => self.graph_keyword(&mut token_iter),
                 Token::IdentifierDeclaration(id) 
                     => self.identifier_declaration(id.to_string(), &mut token_iter),
-                _ => unimplemented!("Default Case")
+                Token::CurlyClose => continue,
+                _ => {
+                    eprintln!("Unexpected token {:?}", token);
+                    exit(1);
+                }
             }
         }
+
+        return &self.graph;
     }
 
     fn graph_keyword(&mut self, tokens: &mut Peekable<Iter<Token>>) {
@@ -34,6 +39,7 @@ impl Parser {
         if *token == Token::BracketOpen {
             let attr_tuple = self.attr_declaration(tokens);
             self.graph.attrs.insert(attr_tuple.0, attr_tuple.1);
+            return;
         }
 
         if *token != Token::CurlyOpen {
@@ -42,8 +48,52 @@ impl Parser {
         }
     }
 
-    fn identifier_declaration(&self, id: String, tokens: &mut Peekable<Iter<Token>>) {
+    fn identifier_declaration(&mut self, id: String, tokens: &mut Peekable<Iter<Token>>) {
+        let mut node = Node::with_label(id);
+        while let Some(t) = tokens.next() {
+            if *t == Token::BracketOpen {
+                let attr_tuple = self.attr_declaration(tokens);
+                node.attrs.insert(attr_tuple.0, attr_tuple.1);
+                self.graph.nodes.push(node);
+                return;
+            }
 
+            if *t == Token::Dash {
+                if let Some(n) = tokens.next() {
+                    if *n != Token::Dash {
+                        eprintln!("Expected - and found {:?}", *n);
+                        exit(1);
+                    }
+                    let edge = self.edge_declaration(node, tokens);
+                    self.graph.edges.push(edge);
+                    return;
+                }
+            }
+        }
+    }
+
+    fn edge_declaration(&mut self, left_node: Node, tokens: &mut Peekable<Iter<Token>>) -> Edge {
+        let mut edge = Edge::default();
+        while let Some(t) = tokens.next() {
+            match t {
+                Token::IdentifierDeclaration(id) => {
+                    let right_node = Node::with_label(id.clone());
+                    edge = Edge::with_nodes(left_node.clone(), right_node);
+                },
+                Token::BracketOpen => {
+                    let attr_tuple = self.attr_declaration(tokens);
+                    edge.attrs.insert(attr_tuple.0, attr_tuple.1);
+                    return edge;
+                },
+                _ => {
+                    eprintln!("Unexpected token {:?}", t);
+                    exit(1);
+                }
+            }
+        }
+
+        eprintln!("Invalid syntax");
+        exit(1);
     }
 
     fn attr_declaration(&self, tokens: &mut Peekable<Iter<Token>>) -> (String, String) {
@@ -59,6 +109,7 @@ impl Parser {
                     attr_key = "bgcolor".to_string();
                     self.expect_token(tokens, Token::Equals);
                 },
+                Token::Quotation => continue,
                 Token::IdentifierDeclaration(id) => {
                     attr_val = id.clone();
                     self.expect_token(tokens, Token::Quotation);
@@ -86,6 +137,7 @@ impl Parser {
                          .expect(format!("Expected {:?} but found nothing", expected).as_str());
         if *next != expected {
             eprintln!("Expected {:?} but found {:?}", expected, *next);
+            exit(1);
         }
     }
 }
