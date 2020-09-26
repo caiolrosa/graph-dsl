@@ -1,7 +1,7 @@
 use std::str::Chars;
 use std::iter::Peekable;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     BracketOpen,
     BracketClose,

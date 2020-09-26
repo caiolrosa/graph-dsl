@@ -4,6 +4,13 @@ use std::slice::{Iter};
 use crate::token::Token;
 use crate::graph::{Graph, Node, Edge};
 
+pub enum ParserError {
+    ExpectedToken(String, Token),
+    UnexpectedToken(Token),
+    InvalidAttributeDeclaration(String),
+    InvalidEdgeDeclaration(String)
+}
+
 pub struct Parser {
     graph: Graph
 }
@@ -23,10 +30,7 @@ impl Parser {
                 Token::IdentifierDeclaration(id) 
                     => self.identifier_declaration(id.to_string(), &mut token_iter),
                 Token::CurlyClose => continue,
-                _ => {
-                    eprintln!("Unexpected token {:?}", token);
-                    exit(1);
-                }
+                _ => self.parse_error(ParserError::UnexpectedToken(token.clone()))
             }
         }
 
@@ -43,8 +47,7 @@ impl Parser {
         }
 
         if *token != Token::CurlyOpen {
-            eprintln!("Expected {{ or [ but found {:?}.", token);
-            exit(1);
+            self.parse_error(ParserError::ExpectedToken("{ or [".to_string(), token.clone()));
         }
     }
 
@@ -61,8 +64,7 @@ impl Parser {
             if *t == Token::Dash {
                 if let Some(n) = tokens.next() {
                     if *n != Token::Dash {
-                        eprintln!("Expected - and found {:?}", *n);
-                        exit(1);
+                        self.parse_error(ParserError::ExpectedToken("-".to_string(), n.clone()))
                     }
                     let edge = self.edge_declaration(node, tokens);
                     self.graph.edges.push(edge);
@@ -75,8 +77,7 @@ impl Parser {
     fn edge_declaration(&mut self, left_node: Node, tokens: &mut Peekable<Iter<Token>>) -> Edge {
         let existing_node = self.graph.nodes.iter().find(|node| node.label == left_node.label);
         if let None = existing_node {
-            eprintln!("Can't create edge with non existing left node \"{}\"", left_node.label);
-            exit(1);
+            self.parse_error(ParserError::InvalidEdgeDeclaration(left_node.label));
         }
 
         let mut edge = Edge::default();
@@ -85,8 +86,7 @@ impl Parser {
                 Token::IdentifierDeclaration(id) => {
                     let right_node = self.graph.nodes.iter().find(|node| node.label == *id);
                     if let None = right_node {
-                        eprintln!("Can't create edge with non existing right node \"{}\"", *id);
-                        exit(1);
+                        self.parse_error(ParserError::InvalidEdgeDeclaration(id.clone()));
                     }
                     edge = Edge::with_nodes(existing_node.unwrap().clone(), right_node.unwrap().clone());
                 },
@@ -95,10 +95,7 @@ impl Parser {
                     edge.attrs.insert(attr_tuple.0, attr_tuple.1);
                     return edge;
                 },
-                _ => {
-                    eprintln!("Unexpected token {:?}", t);
-                    exit(1);
-                }
+                _ => self.parse_error(ParserError::UnexpectedToken(t.clone()))
             }
         }
 
@@ -126,14 +123,12 @@ impl Parser {
                 },
                 Token::BracketClose => {
                     if attr_key.is_empty() || attr_val.is_empty() {
-                        eprintln!("Invalid attribute declaration");
-                        exit(1);
+                        self.parse_error(ParserError::InvalidAttributeDeclaration("Attribute name and value cannot be empty".to_string()));
                     }
                     return (attr_key, attr_val);
                 },
                 _ => { 
-                    eprintln!("Expected one of: ], =, \", keyword or indetifier but found {:?}", t);
-                    exit(1);
+                    self.parse_error(ParserError::ExpectedToken("one of: ], =, \", keyword or indetifier".to_string(), t.clone()));
                 }
             }
         }
@@ -143,11 +138,29 @@ impl Parser {
     }
 
     fn expect_token(&self, tokens: &mut Peekable<Iter<Token>>, expected: Token) {
-        let next = tokens.next()
+        let next = tokens.peek()
                          .expect(format!("Expected {:?} but found nothing", expected).as_str());
-        if *next != expected {
-            eprintln!("Expected {:?} but found {:?}", expected, *next);
+        if **next != expected {
+            eprintln!("Expected {:?} but found {:?}", expected, **next);
             exit(1);
         }
+
+        tokens.next();
+    }
+
+    fn parse_error(&self, error: ParserError) {
+        eprint!("Parse Error: ");
+        match error {
+            ParserError::ExpectedToken(expected, found)
+                => eprintln!("Expected {} but found {:?} instead.", expected, found),
+            ParserError::InvalidAttributeDeclaration(message)
+                => eprintln!("Invalid attribute declaration, {}", message),
+            ParserError::InvalidEdgeDeclaration(token)
+                => eprintln!("Can't create edge with non existing node {}", token),
+            ParserError::UnexpectedToken(token)
+                => eprintln!("Unexpected token {:?}", token)
+        }
+
+        exit(1);
     }
 }

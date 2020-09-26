@@ -7,7 +7,7 @@ fn main() {
     let mut parser = parser::Parser::new();
     let input: &str = "
         graph {
-            graph [bgcolor=\"yellow\"]
+            graph =\"yellow\"]
             a [color=\"red\"]
             b [color=\"blue\"]
             a -- b [color=\"green\"]
